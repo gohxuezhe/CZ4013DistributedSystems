@@ -8,6 +8,6 @@ Instructions on running:
 
 -on second terminal: run client.py with the necessary command-line arguments behind it `python client.py <service_called> <filename> <offset> <length_of_bytes> <content (if applicable)>`
 
-  -to read: `python client.py <service_called> <filename> <offset> <length_of_bytes>`
+  ..*-to read: `python client.py <service_called> <filename> <offset> <length_of_bytes>`
   
-  -to write: `python client.py <service_called> <filename> <offset> <length_of_bytes> <content>`
+  ..*-to write: `python client.py <service_called> <filename> <offset> <length_of_bytes> <content>`
