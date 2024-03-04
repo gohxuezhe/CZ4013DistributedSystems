@@ -18,13 +18,13 @@ def read_file(file_name, offset, length):
             data = file.read(length)
             return data
     except FileNotFoundError:
-        return "Error: File not found."
+        return "(Error) File not found."
     except IOError:
-        return "Error: Unable to read the file."
+        return "(Error) Unable to read the file."
     except ValueError:
-        return "Error: Invalid offset or length."
+        return "(Error) Invalid offset or length."
     except Exception as e:
-        return "Error:", e
+        return "(Error)", e
 
 # Write content to file function
 def write_file(file_name, offset, content):
@@ -42,7 +42,7 @@ def write_file(file_name, offset, content):
             file.write(existing_content)
         return "Successful"
     except Exception as e:
-        return f"Unsuccessful with error: {str(e)}"
+        return f"(Error) {str(e)}"
 
 while True:
     try:
