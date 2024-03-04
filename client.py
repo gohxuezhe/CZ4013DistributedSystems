@@ -46,7 +46,7 @@ def main(service_called, filename, offset, length_of_bytes, content):
 
 if __name__ == "__main__":
     # Check if command-line arguments are provided correctly
-    if (len(sys.argv) not in [5,6]):
+    if (len(sys.argv) < 5):
         print("Usage: python client.py <service_called> <filename> <offset> <length_of_bytes> <content (if applicable)>")
         sys.exit(1)
     
@@ -55,10 +55,7 @@ if __name__ == "__main__":
     filename = sys.argv[2]
     offset = int(sys.argv[3])
     length_of_bytes = int(sys.argv[4])
-    if len(sys.argv) > 5:
-        content = sys.argv[5]
-    else:
-        content = None
+    content = ' '.join(sys.argv[5:]) if len(sys.argv) > 5 else None
     
     # Calling main
     main(service_called, filename, offset, length_of_bytes, content)
