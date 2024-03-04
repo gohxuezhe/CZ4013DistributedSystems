@@ -65,7 +65,7 @@ while True:
         elif service_code_in_msg == 1:
             # Unmarshal the received data
             message = marshalling.write_service_client_message.unmarshal(data)
-            print("Unmarshalled message:", message.service_code, message.file_path, message.offset, message.length_of_bytes, message.content)
+            print("Unmarshalled message:", message.service_code, message.file_path, message.offset, message.content)
             # write data from file, return if successful or not+error
             data_to_send = write_file(message.file_path, message.offset, message.content)
             # Marshal the data and send it back to the client

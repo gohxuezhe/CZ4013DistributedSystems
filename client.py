@@ -29,7 +29,7 @@ def main(service_called, filename, offset, length_of_bytes, content):
     
     # 'write' request message
     elif service_called=='write':
-        message_data = (1, filename, offset, length_of_bytes, content) # service_code (term used in marshalling.py) = 1: refers to write
+        message_data = (1, filename, offset, content) # service_code (term used in marshalling.py) = 1: refers to write
         marshalled_message_data = marshalling.write_service_client_message(*message_data).marshal()
         # Create a UDP socket
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
@@ -47,14 +47,17 @@ def main(service_called, filename, offset, length_of_bytes, content):
 if __name__ == "__main__":
     # Check if command-line arguments are provided correctly
     if (len(sys.argv) < 5):
-        print("Usage: python client.py <service_called> <filename> <offset> <length_of_bytes> <content (if applicable)>")
+        print("Usage: python client.py <service_called> <filename> <offset> <length_of_bytes (if applicable)> <content (if applicable)>")
         sys.exit(1)
     
     # Utilisation of command-line arguments
     service_called = sys.argv[1]
     filename = sys.argv[2]
     offset = int(sys.argv[3])
-    length_of_bytes = int(sys.argv[4])
+    if service_called == 'read':
+        length_of_bytes = int(sys.argv[4])
+    else:
+        length_of_bytes = None
     content = ' '.join(sys.argv[5:]) if len(sys.argv) > 5 else None
     
     # Calling main
