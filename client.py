@@ -38,87 +38,93 @@ def create_UDP_socket():
 # Client function
 def service(service_called, file_pathname, offset, length_of_bytes, content, length_of_monitoring_interval):
     global cache
-    
-    # Check cache before requesting data from the server
-    if service_called == "read":
-        if file_pathname in cache:
-            cache_entry = cache[file_pathname]
-            Tc = cache_entry.get('Tc', 0)
-            print("Tc: ", Tc)
-            Tmclient = cache_entry.get('Tmclient', 0)
-            print("Tmclient: ", Tmclient)
-            current_time = time.time()
-            print("current_time: ", current_time)
-            # Evaluate whether T - Tc < t
-            if current_time - Tc < t:
-                print("current_time - Tc < t")
-                response_data = ""
-                for i in range(offset, offset + length_of_bytes):
-                    if i in cache_entry['data']:
-                        response_data+=cache_entry['data'][i]
-                        print("cache_entry['data'][",i,"]",(cache_entry['data'][i]))              
-                    else:
-                        response_data+=fill_cache(file_pathname, i) # If the byte is missing, call read service to fill it
-                        print("NEWLY FILLED cache_entry['data'][",i,"]",(cache_entry['data'][i])) 
-                        
-                print("Response from cache:", response_data)
-                print("Cache content:", cache)
-                return
-            else:
-                print("current_time - Tc >= t")
-                # Call tmserver service to obtain tmserver value
-                Tmserver = service("tmserver", file_pathname, None, None, None, None)
-                if Tmclient == Tmserver:
-                    print("Cache entry is valid.")
-                    # Update Tc
-                    cache_entry['Tc'] = current_time
-                else:
-                    print("Cache entry is invalidated. Requesting updated data from server.")
-                    # Update Tc
-                    cache_entry['Tc'] = current_time
-                    # Call read service to fill cache with updated data
-                    service("read", file_pathname, offset, length_of_bytes, None, None)
-                print("Cache content:", cache)
-                return
 
     # 'read' request message
     if service_called == "read":
-        message_data = (1, file_pathname, offset, length_of_bytes) # service_code (term used in marshalling.py) = 1: refers to read
-        marshallled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshall()
-        # Send the marshallled data to the server
-        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
-        # Receive response from the server
-        response, _ = client_socket.recvfrom(1024)
-        # Unmarshall the received data
-        response_message = marshalling.ReadServiceServerMessage.unmarshall(response)
-        # Update cache
-        cache_entry = {
-            'data': {offset + i: response_message.file_data[i] for i in range(len(response_message.file_data))},
-            'Tc': time.time(),  # Update Tc
-            'Tmclient': service("tmserver", file_pathname, None, None, None, None)
-        }
-        print("Cache content BEFORE:", cache)
-        cache[file_pathname] = cache_entry
-        print("Cache content AFTER:", cache)
-        print("Response:", response_message.file_data)
+        # IF CACHE HAS THAT FILE
+        if file_pathname in cache:
+            cache_entry = cache[file_pathname]
+            response_data = ""
+            for i in range(offset, offset + length_of_bytes):
+                if i in cache_entry['data']:
+                    cache_byte_entry = cache_entry['data'][i]
+                    Tc = cache_byte_entry.get('Tc', 0)
+                    print("Tc: ", Tc)
+                    Tmclient = cache_byte_entry.get('Tmclient', 0)
+                    print("Tmclient: ", Tmclient)
+                    current_time = time.time()
+                    print("current_time: ", current_time)
+                    if current_time - Tc < t:
+                        print("current_time - Tc < t")
+                        # Cache hit, byte is still fresh
+                        response_data+=cache_entry['data'][i]['data']
+                        print("cache_entry['data'][", i, "]['data']:", (cache_entry['data'][i]['data']))
+                    else:
+                        print("current_time - Tc >= t")
+                        # Call tmserver service to obtain tmserver value
+                        Tmserver = service("tmserver", file_pathname, i, None, None, None)
+                        if Tmclient == Tmserver:
+                            # Cache entry is valid, byte is still fresh
+                            print("Cache entry is valid.")
+                            # Update Tc
+                            cache_byte_entry['Tc'] = current_time
+                            cache_entry['data'][i] = cache_byte_entry
+                            cache[file_pathname] = cache_entry 
+                            response_data+=cache_entry['data'][i]['data']
+                            print("cache_entry['data'][", i, "]['data']:", (cache_entry['data'][i]['data']))
+                        else:
+                            # Cache entry is invalid, need request byte from server
+                            print("Cache entry is invalidated. Requesting updated data from server.")
+                            response_data+=fill_cache(file_pathname, i) # Read and update the byte
+                            print("UPDATED cache_entry['data'][", i, "]['data']:", (cache_entry['data'][i]['data']))
+                else:
+                    # Byte not found in cache, fetch it from server
+                    response_data+=fill_cache(file_pathname, i) # If the byte is missing, call read service to fill it
+                    print("NEWLY FILLED cache_entry['data'][",i,"]['data']:",(cache_entry['data'][i]['data']))   
+            print("Cache content:", cache)
+            print("data that is read in:", response_data)
+            return
+
+        #IF CACHE DOES NOT HAVE THAT FILE
+        else:
+            message_data = (1, file_pathname, offset, length_of_bytes) # service_code (term used in marshalling.py) = 1: refers to read
+            marshallled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshall()
+            # Send the marshallled data to the server
+            client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
+            # Receive response from the server
+            response, _ = client_socket.recvfrom(1024)
+            # Unmarshall the received data
+            response_message = marshalling.ReadServiceServerMessage.unmarshall(response)
+            print("Cache content BEFORE:", cache)
+            # Update cache for each byte
+            cache_entry = cache.get(file_pathname, {})
+            for i in range(offset, offset + length_of_bytes):
+                byte_cache = cache_entry.get('data', {})
+                byte_cache_entry = {'data': response_message.file_data[i - offset], 'Tc': time.time(), 'Tmclient': service("tmserver", file_pathname, i, None, None, None)}
+                byte_cache[i] = byte_cache_entry
+                cache_entry['data'] = byte_cache
+            cache[file_pathname] = cache_entry    
+            print("Cache content AFTER:", cache)
+            print("Response:", response_message.file_data)
 
     # 'write' request message
     elif service_called == 'write':
         message_data = (2, file_pathname, offset, content)  # service_code (term used in marshalling.py) = 2: refers to write
         marshallled_message_data = marshalling.WriteServiceClientMessage(*message_data).marshall()
-        # Send the marshallled data to the server
+        # Send the marshalled data to the server
         client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
         # Unmarshall the received data
         response_message = marshalling.WriteServiceServerMessage.unmarshall(response)
-        # Check if file_pathname exists in the cache, if exists update cache too, else dont care
+        
+        # Update cache entry for each byte being written
         if file_pathname in cache:
             print(file_pathname, "in cache, going in to update")
             print("Cache content BEFORE:", cache)
             cache_entry = cache.get(file_pathname, {})  # Retrieve existing cache entry or create a new one if it doesn't exist
             written_content_length = len(content)
-
+            
             # Update existing keys to shift up or down depending on where the new data is written
             temp_data = {}
             for key, value in cache_entry['data'].items():
@@ -126,20 +132,18 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
                     temp_data[key + written_content_length] = value  # Shift keys up
                 else:
                     temp_data[key] = value  # Keep existing keys as they are
-
+            
             # Insert new data into temporary dictionary
             for i in range(written_content_length):
-                temp_data[offset + i] = content[i]
-
+                temp_data[offset + i] = {'data': content[i], 'Tc': time.time(), 'Tmclient': time.time()}
+            
             # Update cache entry with temporary data
             cache_entry['data'] = temp_data
-
-            # Update Tc and Tmclient to current time
-            cache_entry['Tc'] = time.time()
-            cache_entry['Tmclient'] = time.time()
+            
             cache[file_pathname] = cache_entry
         print("Cache content AFTER:", cache)
         print("Response:", response_message.file_data)
+
 
     # 'monitor' request message
     elif service_called=='monitor':
@@ -162,14 +166,14 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
                 # Unmarshall the received data
                 response_message = marshalling.MonitorCallbackServiceServerMessage.unmarshall(response)
                 print(f'New update for {file_pathname}: {response_message.file_data}')
-
-                # Update the cache
-                cache_entry = {
-                    'data': {i: response_message.file_data[i] for i in range(len(response_message.file_data))},
-                    'Tc': time.time(),  # Update Tc
-                    'Tmclient': service("tmserver", file_pathname, None, None, None, None)
-                }
                 print("Cache content BEFORE:", cache)
+                # Update the cache
+                cache_entry = {}
+                for i in range(len(response_message.file_data)):
+                    byte_cache = cache_entry.get('data', {})
+                    byte_cache_entry = {'data': response_message.file_data[i], 'Tc': time.time(), 'Tmclient': service("tmserver", file_pathname, i, None, None, None)}
+                    byte_cache[i] = byte_cache_entry
+                    cache_entry['data'] = byte_cache
                 cache[file_pathname] = cache_entry
                 print("Cache content AFTER:", cache)
             except socket.timeout:
@@ -181,7 +185,7 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
 
     # 'tmserver' request message
     elif service_called == 'tmserver':
-        message_data = (69, file_pathname)  # service_code (term used in marshalling.py) = 69: refers to tmserver
+        message_data = (69, file_pathname, offset)  # service_code (term used in marshalling.py) = 69: refers to tmserver
         marshallled_message_data = marshalling.TmserverServiceClientMessage(*message_data).marshall()
         # Send the marshallled data to the server
         client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
@@ -196,16 +200,19 @@ def fill_cache(file_pathname, offset):
     # Call read service to fill the missing byte in cache
     message_data = (1, file_pathname, offset, 1)  # service_code (term used in marshalling.py) = 1: refers to read
     marshallled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshall()
-    # Send the marshallled data to the server
+    # Send the marshalled data to the server
     client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
     # Receive response from the server
     response, _ = client_socket.recvfrom(1024)
     # Unmarshall the received data
     response_message = marshalling.ReadServiceServerMessage.unmarshall(response)
     
-    # Update cache entry with new byte key and value
+    # Update cache entry with new byte key and value along with timestamps
     cache_entry = cache.get(file_pathname, {})
-    cache_entry['data'] = {**cache_entry.get('data', {}), **{offset: response_message.file_data}}
+    byte_cache = cache_entry.get('data', {})
+    byte_cache_entry = {'data': response_message.file_data, 'Tc': time.time(), 'Tmclient': service("tmserver", file_pathname, offset, None, None, None)}
+    byte_cache[offset] = byte_cache_entry
+    cache_entry['data'] = byte_cache
     cache[file_pathname] = cache_entry
 
     return response_message.file_data

@@ -166,16 +166,18 @@ class MonitorCallbackServiceServerMessage:
     
 # (tmserver service) marshalling and unmarshalling for client msg
 class TmserverServiceClientMessage:
-    def __init__(self, service_code, file_path):
+    def __init__(self, service_code, file_path, offset):
         self.service_code = service_code
         self.file_path = file_path
+        self.offset = offset
 
     def marshall(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder='big')
         file_path_bytes = self.file_path.encode('utf-8')
+        offset_bytes = self.offset.to_bytes(8, byteorder='big')
         # Combine encoded attributes into a byte stream
-        return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder='big') + file_path_bytes
+        return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder='big') + file_path_bytes + offset_bytes
 
     @classmethod
     def unmarshall(cls, data):
@@ -183,9 +185,10 @@ class TmserverServiceClientMessage:
         service_code = int.from_bytes(data[0:1], byteorder='big')
         file_path_length = int.from_bytes(data[1:2], byteorder='big')
         file_path = data[2:2 + file_path_length].decode('utf-8')
+        offset = int.from_bytes(data[2+file_path_length:], byteorder='big')
 
         # Create a new message instance with reconstructed attributes
-        return cls(service_code, file_path)
+        return cls(service_code, file_path, offset)
 
 # (tmserver service) marshalling and unmarshalling for server msg
 class TmserverServiceServerMessage:

@@ -87,11 +87,18 @@ def monitor_callback(file_name):
 
         monitor_dict[file_name] = new_monitor_list
 
-# Get modification time of file
-def get_modification_time(file_name):
+# Get modification time of byte in file
+def get_modification_time(file_name, byte_index):
     try:
-        modification_time = os.path.getmtime(file_name)
-        return modification_time
+        if byte_index is not None:
+            with open(file_name, 'rb') as file:
+                file.seek(byte_index)
+                file.read(1)  # Read a single byte to ensure we reach the desired position
+                byte_modification_time = os.fstat(file.fileno()).st_mtime
+            return byte_modification_time
+        else:
+            modification_time = os.path.getmtime(file_name)
+            return modification_time
     except FileNotFoundError:
         return "(Error) File not found."
     except Exception as e:
@@ -145,7 +152,7 @@ while True:
             message = marshalling.TmserverServiceClientMessage.unmarshall(data)
             print("Unmarshallled message:", message.service_code, message.file_path)
             # get modification time of file
-            modification_time = get_modification_time(message.file_path)
+            modification_time = get_modification_time(message.file_path, message.offset)
             # marshall the modification time and send it back to the client
             marshallled_data = marshalling.TmserverServiceServerMessage(modification_time).marshall()
             udp_socket.sendto(marshallled_data, address)
