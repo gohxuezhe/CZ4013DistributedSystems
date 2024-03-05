@@ -1,4 +1,6 @@
 import socket
+import os
+import time
 import marshalling
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -44,6 +46,16 @@ def write_file(file_name, offset, content):
     except Exception as e:
         return f"(Error) {str(e)}"
 
+# Get modification time of file
+def get_modification_time(file_name):
+    try:
+        modification_time = os.path.getmtime(file_name)
+        return modification_time
+    except FileNotFoundError:
+        return "(Error) File not found."
+    except Exception as e:
+        return f"(Error) {str(e)}"
+    
 while True:
     try:
         data, address = udp_socket.recvfrom(1024)
@@ -70,6 +82,16 @@ while True:
             data_to_send = write_file(message.file_path, message.offset, message.content)
             # Marshal the data and send it back to the client
             marshalled_data = marshalling.write_service_server_message(data_to_send).marshal()
+
+        # if client requests for modification time of file
+        elif service_code_in_msg == 2:
+            # Unmarshal the received data
+            message = marshalling.monitor_service_client_message.unmarshal(data)
+            print("Unmarshalled message:", message.service_code, message.file_path)
+            # get modification time of file
+            modification_time = get_modification_time(message.file_path)
+            # Marshal the modification time and send it back to the client
+            marshalled_data = marshalling.monitor_service_server_message(modification_time).marshal()
 
         udp_socket.sendto(marshalled_data, address)
     except Exception as e:
