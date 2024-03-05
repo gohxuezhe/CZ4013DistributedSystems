@@ -143,6 +143,26 @@ class MonitorServiceServerMessage:
 
         # Create a new message instance with reconstructed attributes
         return cls(file_data)
+
+# (monitor callback service) marshalling and unmarshalling for server msg
+class MonitorCallbackServiceServerMessage:
+    def __init__(self, file_data):
+        self.file_data = file_data
+
+    def marshal(self):
+        # Encode object attributes into a byte stream
+        file_data_bytes = self.file_data.encode('utf-8')
+        # Combine encoded attributes into a byte stream
+        return len(file_data_bytes).to_bytes(1, byteorder='big') + file_data_bytes
+
+    @classmethod
+    def unmarshal(cls, data):
+        # Decode byte stream to reconstruct object attributes
+        file_data_length = int.from_bytes(data[0:1], byteorder='big')
+        file_data = data[1:1 + file_data_length].decode('utf-8')
+
+        # Create a new message instance with reconstructed attributes
+        return cls(file_data)
     
 # (tmserver service) marshalling and unmarshalling for client msg
 class TmserverServiceClientMessage:
