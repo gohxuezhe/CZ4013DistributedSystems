@@ -162,6 +162,16 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
                 # Unmarshall the received data
                 response_message = marshalling.MonitorCallbackServiceServerMessage.unmarshall(response)
                 print(f'New update for {file_pathname}: {response_message.file_data}')
+
+                # Update the cache
+                cache_entry = {
+                    'data': {i: response_message.file_data[i] for i in range(len(response_message.file_data))},
+                    'Tc': time.time(),  # Update Tc
+                    'Tmclient': service("tmserver", file_pathname, None, None, None, None)
+                }
+                print("Cache content BEFORE:", cache)
+                cache[file_pathname] = cache_entry
+                print("Cache content AFTER:", cache)
             except socket.timeout:
                 print('Monitoring completed.')
                 return
@@ -183,22 +193,22 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
 
 # Helper function to fill in missing bytes into cache from server
 def fill_cache(file_pathname, offset):
-        # Call read service to fill the missing byte in cache
-        message_data = (1, file_pathname, offset, 1)  # service_code (term used in marshalling.py) = 1: refers to read
-        marshallled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshall()
-        # Send the marshallled data to the server
-        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
-        # Receive response from the server
-        response, _ = client_socket.recvfrom(1024)
-        # Unmarshall the received data
-        response_message = marshalling.ReadServiceServerMessage.unmarshall(response)
-        
-        # Update cache entry with new byte key and value
-        cache_entry = cache.get(file_pathname, {})
-        cache_entry['data'] = {**cache_entry.get('data', {}), **{offset: response_message.file_data}}
-        cache[file_pathname] = cache_entry
+    # Call read service to fill the missing byte in cache
+    message_data = (1, file_pathname, offset, 1)  # service_code (term used in marshalling.py) = 1: refers to read
+    marshallled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshall()
+    # Send the marshallled data to the server
+    client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
+    # Receive response from the server
+    response, _ = client_socket.recvfrom(1024)
+    # Unmarshall the received data
+    response_message = marshalling.ReadServiceServerMessage.unmarshall(response)
+    
+    # Update cache entry with new byte key and value
+    cache_entry = cache.get(file_pathname, {})
+    cache_entry['data'] = {**cache_entry.get('data', {}), **{offset: response_message.file_data}}
+    cache[file_pathname] = cache_entry
 
-        return response_message.file_data
+    return response_message.file_data
 
 if __name__ == "__main__":
     client_socket = create_UDP_socket()
