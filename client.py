@@ -84,13 +84,13 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
     # 'read' request message
     if service_called == "read":
         message_data = (1, file_pathname, offset, length_of_bytes) # service_code (term used in marshalling.py) = 1: refers to read
-        marshalled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshal()
-        # Send the marshalled data to the server
-        client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
+        marshallled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshall()
+        # Send the marshallled data to the server
+        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
-        # Unmarshal the received data
-        response_message = marshalling.ReadServiceServerMessage.unmarshal(response)
+        # Unmarshall the received data
+        response_message = marshalling.ReadServiceServerMessage.unmarshall(response)
         # Update cache
         cache_entry = {
             'data': {offset + i: response_message.file_data[i] for i in range(len(response_message.file_data))},
@@ -105,13 +105,13 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
     # 'write' request message
     elif service_called == 'write':
         message_data = (2, file_pathname, offset, content)  # service_code (term used in marshalling.py) = 2: refers to write
-        marshalled_message_data = marshalling.WriteServiceClientMessage(*message_data).marshal()
-        # Send the marshalled data to the server
-        client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
+        marshallled_message_data = marshalling.WriteServiceClientMessage(*message_data).marshall()
+        # Send the marshallled data to the server
+        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
-        # Unmarshal the received data
-        response_message = marshalling.WriteServiceServerMessage.unmarshal(response)
+        # Unmarshall the received data
+        response_message = marshalling.WriteServiceServerMessage.unmarshall(response)
         # Check if file_pathname exists in the cache, if exists update cache too, else dont care
         if file_pathname in cache:
             print(file_pathname, "in cache, going in to update")
@@ -144,13 +144,13 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
     # 'monitor' request message
     elif service_called=='monitor':
         message_data = (3, file_pathname, length_of_monitoring_interval) # service_code (term used in marshalling.py) = 3: refers to monitor
-        marshalled_message_data = marshalling.MonitorServiceClientMessage(*message_data).marshal()
-        # Send the marshalled data to the server
-        client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
+        marshallled_message_data = marshalling.MonitorServiceClientMessage(*message_data).marshall()
+        # Send the marshallled data to the server
+        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
-        # Unmarshal the received data
-        response_message = marshalling.MonitorServiceServerMessage.unmarshal(response)
+        # Unmarshall the received data
+        response_message = marshalling.MonitorServiceServerMessage.unmarshall(response)
         print("Response:", response_message.file_data)
         # Set timeout for monitoring
         client_socket.settimeout(length_of_monitoring_interval * 60)
@@ -159,8 +159,8 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
             try:
                 # Receive response from the server
                 response, _ = client_socket.recvfrom(1024)
-                # Unmarshal the received data
-                response_message = marshalling.MonitorCallbackServiceServerMessage.unmarshal(response)
+                # Unmarshall the received data
+                response_message = marshalling.MonitorCallbackServiceServerMessage.unmarshall(response)
                 print(f'New update for {file_pathname}: {response_message.file_data}')
             except socket.timeout:
                 print('Monitoring completed.')
@@ -172,26 +172,26 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
     # 'tmserver' request message
     elif service_called == 'tmserver':
         message_data = (69, file_pathname)  # service_code (term used in marshalling.py) = 69: refers to tmserver
-        marshalled_message_data = marshalling.TmserverServiceClientMessage(*message_data).marshal()
-        # Send the marshalled data to the server
-        client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
+        marshallled_message_data = marshalling.TmserverServiceClientMessage(*message_data).marshall()
+        # Send the marshallled data to the server
+        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
-        # Unmarshal the received data
-        response_message = marshalling.TmserverServiceServerMessage.unmarshal(response)
+        # Unmarshall the received data
+        response_message = marshalling.TmserverServiceServerMessage.unmarshall(response)
         return response_message.modification_time
 
 # Helper function to fill in missing bytes into cache from server
 def fill_cache(file_pathname, offset):
         # Call read service to fill the missing byte in cache
         message_data = (1, file_pathname, offset, 1)  # service_code (term used in marshalling.py) = 1: refers to read
-        marshalled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshal()
-        # Send the marshalled data to the server
-        client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
+        marshallled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshall()
+        # Send the marshallled data to the server
+        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
-        # Unmarshal the received data
-        response_message = marshalling.ReadServiceServerMessage.unmarshal(response)
+        # Unmarshall the received data
+        response_message = marshalling.ReadServiceServerMessage.unmarshall(response)
         
         # Update cache entry with new byte key and value
         cache_entry = cache.get(file_pathname, {})

@@ -8,7 +8,7 @@ class ReadServiceClientMessage:
         self.offset = offset
         self.length_of_bytes = length_of_bytes
 
-    def marshal(self):
+    def marshall(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder='big')
         file_path_bytes = self.file_path.encode('utf-8')
@@ -18,7 +18,7 @@ class ReadServiceClientMessage:
         return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder='big') + file_path_bytes + offset_bytes + length_of_bytes_bytes
 
     @classmethod
-    def unmarshal(cls, data):
+    def unmarshall(cls, data):
         # Decode byte stream to reconstruct object attributes
         service_code = int.from_bytes(data[0:1],byteorder='big')
         file_path_length = int.from_bytes(data[1:2], byteorder='big')
@@ -34,14 +34,14 @@ class ReadServiceServerMessage:
     def __init__(self, file_data):
         self.file_data = file_data
 
-    def marshal(self):
+    def marshall(self):
         # Encode object attributes into a byte stream
         file_data_bytes = self.file_data.encode('utf-8')
         # Combine encoded attributes into a byte stream
         return len(file_data_bytes).to_bytes(1, byteorder='big') + file_data_bytes
 
     @classmethod
-    def unmarshal(cls, data):
+    def unmarshall(cls, data):
         # Decode byte stream to reconstruct object attributes
         file_data_length = int.from_bytes(data[0:1], byteorder='big')
         file_data = data[1:1 + file_data_length].decode('utf-8')
@@ -57,7 +57,7 @@ class WriteServiceClientMessage:
         self.offset = offset
         self.content = content
 
-    def marshal(self):
+    def marshall(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder='big')
         file_path_bytes = self.file_path.encode('utf-8')
@@ -67,7 +67,7 @@ class WriteServiceClientMessage:
         return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder='big') + file_path_bytes + offset_bytes + content_bytes
 
     @classmethod
-    def unmarshal(cls, data):
+    def unmarshall(cls, data):
         # Decode byte stream to reconstruct object attributes
         service_code = int.from_bytes(data[0:1], byteorder='big')
         file_path_length = int.from_bytes(data[1:2], byteorder='big')
@@ -83,14 +83,14 @@ class WriteServiceServerMessage:
     def __init__(self, file_data):
         self.file_data = file_data
 
-    def marshal(self):
+    def marshall(self):
         # Encode object attributes into a byte stream
         file_data_bytes = self.file_data.encode('utf-8')
         # Combine encoded attributes into a byte stream
         return len(file_data_bytes).to_bytes(1, byteorder='big') + file_data_bytes
 
     @classmethod
-    def unmarshal(cls, data):
+    def unmarshall(cls, data):
         # Decode byte stream to reconstruct object attributes
         file_data_length = int.from_bytes(data[0:1], byteorder='big')
         file_data = data[1:1 + file_data_length].decode('utf-8')
@@ -105,7 +105,7 @@ class MonitorServiceClientMessage:
         self.file_path = file_path
         self.length_of_monitoring_interval = length_of_monitoring_interval
 
-    def marshal(self):
+    def marshall(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder='big')
         file_path_bytes = self.file_path.encode('utf-8')
@@ -114,7 +114,7 @@ class MonitorServiceClientMessage:
         return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder='big') + file_path_bytes + length_of_monitoring_interval_bytes
 
     @classmethod
-    def unmarshal(cls, data):
+    def unmarshall(cls, data):
         # Decode byte stream to reconstruct object attributes
         service_code = int.from_bytes(data[0:1],byteorder='big')
         file_path_length = int.from_bytes(data[1:2], byteorder='big')
@@ -129,14 +129,14 @@ class MonitorServiceServerMessage:
     def __init__(self, file_data):
         self.file_data = file_data
 
-    def marshal(self):
+    def marshall(self):
         # Encode object attributes into a byte stream
         file_data_bytes = self.file_data.encode('utf-8')
         # Combine encoded attributes into a byte stream
         return len(file_data_bytes).to_bytes(1, byteorder='big') + file_data_bytes
 
     @classmethod
-    def unmarshal(cls, data):
+    def unmarshall(cls, data):
         # Decode byte stream to reconstruct object attributes
         file_data_length = int.from_bytes(data[0:1], byteorder='big')
         file_data = data[1:1 + file_data_length].decode('utf-8')
@@ -149,14 +149,14 @@ class MonitorCallbackServiceServerMessage:
     def __init__(self, file_data):
         self.file_data = file_data
 
-    def marshal(self):
+    def marshall(self):
         # Encode object attributes into a byte stream
         file_data_bytes = self.file_data.encode('utf-8')
         # Combine encoded attributes into a byte stream
         return len(file_data_bytes).to_bytes(1, byteorder='big') + file_data_bytes
 
     @classmethod
-    def unmarshal(cls, data):
+    def unmarshall(cls, data):
         # Decode byte stream to reconstruct object attributes
         file_data_length = int.from_bytes(data[0:1], byteorder='big')
         file_data = data[1:1 + file_data_length].decode('utf-8')
@@ -170,7 +170,7 @@ class TmserverServiceClientMessage:
         self.service_code = service_code
         self.file_path = file_path
 
-    def marshal(self):
+    def marshall(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder='big')
         file_path_bytes = self.file_path.encode('utf-8')
@@ -178,7 +178,7 @@ class TmserverServiceClientMessage:
         return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder='big') + file_path_bytes
 
     @classmethod
-    def unmarshal(cls, data):
+    def unmarshall(cls, data):
         # Decode byte stream to reconstruct object attributes
         service_code = int.from_bytes(data[0:1], byteorder='big')
         file_path_length = int.from_bytes(data[1:2], byteorder='big')
@@ -192,7 +192,7 @@ class TmserverServiceServerMessage:
     def __init__(self, modification_time):
         self.modification_time = modification_time
 
-    def marshal(self):
+    def marshall(self):
         # Convert modification_time to integer
         modification_time_int = int(self.modification_time)
         # Encode modification_time into a byte stream
@@ -201,7 +201,7 @@ class TmserverServiceServerMessage:
         return modification_time_bytes
 
     @classmethod
-    def unmarshal(cls, data):
+    def unmarshall(cls, data):
         # Decode byte stream to reconstruct modification_time
         modification_time = int.from_bytes(data, byteorder='big')
 
