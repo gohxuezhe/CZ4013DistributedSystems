@@ -1,5 +1,6 @@
 import socket
 import marshalling
+import datetime
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 hostname = socket.gethostname()
@@ -24,7 +25,7 @@ def read_file(file_name, offset, length):
     except ValueError:
         return "(Error) Invalid offset or length."
     except Exception as e:
-        return "(Error)", e
+        return f"(Error) {e}"
 
 # Write content to file function
 def write_file(file_name, offset, content):
@@ -40,36 +41,63 @@ def write_file(file_name, offset, content):
             file.write(content.encode('utf-8'))
             # Write back the existing content
             file.write(existing_content)
-        return "Successful"
+        return f"Successful write to {file_name} at offset {offset}"
     except Exception as e:
-        return f"(Error) {str(e)}"
+        return f"(Error) {e}"
+
+def monitor_file(file_name, length_of_monitoring_interval):
+    try:
+        with open(file_name, "r") as file:
+            pass
+
+        current_time = datetime.datetime.now()
+        end_time = current_time + datetime.timedelta(minutes=length_of_monitoring_interval)
+        
+        current_time_fmt = current_time.strftime("%H:%M:%S")
+        end_time_fmt = end_time.strftime("%H:%M:%S")
+
+        return f"Client is monitoring {file_name} for {length_of_monitoring_interval}min from {current_time_fmt} to {end_time_fmt}"
+    except FileNotFoundError:
+        return "(Error) File not found."
+    except Exception as e:
+        return f"(Error) {e}"
 
 while True:
     try:
         data, address = udp_socket.recvfrom(1024)
         print("Received message:", data, "from", address)
-        
+
         service_code_in_msg = int.from_bytes(data[0:1], byteorder='big')
 
         # if client request for read
-        if service_code_in_msg == 0:
+        if service_code_in_msg == 1:
             # Unmarshal the received data
-            message = marshalling.read_service_client_message.unmarshal(data)
+            message = marshalling.ReadServiceClientMessage.unmarshal(data)
             print("Unmarshalled message:", message.service_code, message.file_path, message.offset, message.length_of_bytes)
             # Read data from file, extract requested portion of data
             data_to_send = read_file(message.file_path, message.offset, message.length_of_bytes)
             # Marshal the data and send it back to the client
-            marshalled_data = marshalling.read_service_server_message(data_to_send).marshal()
+            marshalled_data = marshalling.ReadServiceServerMessage(data_to_send).marshal()
         
         # if client request for write
-        elif service_code_in_msg == 1:
+        elif service_code_in_msg == 2:
             # Unmarshal the received data
-            message = marshalling.write_service_client_message.unmarshal(data)
+            message = marshalling.WriteServiceClientMessage.unmarshal(data)
             print("Unmarshalled message:", message.service_code, message.file_path, message.offset, message.content)
             # write data from file, return if successful or not+error
             data_to_send = write_file(message.file_path, message.offset, message.content)
             # Marshal the data and send it back to the client
-            marshalled_data = marshalling.write_service_server_message(data_to_send).marshal()
+            marshalled_data = marshalling.WriteServiceServerMessage(data_to_send).marshal()
+
+        # if client request for monitor
+        elif service_code_in_msg == 3:
+            # Unmarshal the received data
+            message = marshalling.MonitorServiceClientMessage.unmarshal(data)
+            print("Unmarshalled message:", message.service_code, message.file_path, message.length_of_monitoring_interval)
+            # write data from file, return if successful or not+error
+            data_to_send = monitor_file(message.file_path, message.length_of_monitoring_interval)
+            # Marshal the data and send it back to the client
+            marshalled_data = marshalling.MonitorServiceServerMessage(data_to_send).marshal()
 
         udp_socket.sendto(marshalled_data, address)
     except Exception as e:

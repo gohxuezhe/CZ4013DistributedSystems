@@ -4,7 +4,7 @@ import time
 import marshalling
 
 # CONSTANTS
-SERVER_IP = '10.238.203.108' # CHANGE IP ADDRESS ACCORDINGLY TO THE IP ADDRESS OF SERVER
+SERVER_IP = '192.168.31.5' # CHANGE IP ADDRESS ACCORDINGLY TO THE IP ADDRESS OF SERVER
 SERVER_PORT = 12345
 CLIENT_SERVICE_MESSAGE = """Client Services Available:
 1. Read
@@ -28,34 +28,39 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
     
     # 'read' request message
     if service_called == "read":
-        message_data = (0, file_pathname, offset, length_of_bytes) # service_code (term used in marshalling.py) = 0: refers to read
-        marshalled_message_data = marshalling.read_service_client_message(*message_data).marshal()
+        message_data = (1, file_pathname, offset, length_of_bytes) # service_code (term used in marshalling.py) = 0: refers to read
+        marshalled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshal()
         # Send the marshalled data to the server
         client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
         # Unmarshal the received data
-        response_message = marshalling.read_service_server_message.unmarshal(response)
+        response_message = marshalling.ReadServiceServerMessage.unmarshal(response)
         print("Response:", response_message.file_data)
     
     # 'write' request message
     elif service_called=='write':
-        message_data = (1, file_pathname, offset, content) # service_code (term used in marshalling.py) = 1: refers to write
-        marshalled_message_data = marshalling.write_service_client_message(*message_data).marshal()
+        message_data = (2, file_pathname, offset, content) # service_code (term used in marshalling.py) = 1: refers to write
+        marshalled_message_data = marshalling.WriteServiceClientMessage(*message_data).marshal()
         # Send the marshalled data to the server
         client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
         # Unmarshal the received data
-        response_message = marshalling.write_service_server_message.unmarshal(response)
+        response_message = marshalling.WriteServiceServerMessage.unmarshal(response)
         print("Response:", response_message.file_data)
 
     # 'monitor' request message
     elif service_called=='monitor':
-        message_data = (2, file_pathname, length_of_monitoring_interval) # service_code (term used in marshalling.py) = 2: refers to monitor
-        marshalled_message_data = marshalling.monitor_service_client_message(*message_data).marshal()
-
+        message_data = (3, file_pathname, length_of_monitoring_interval) # service_code (term used in marshalling.py) = 2: refers to monitor
+        marshalled_message_data = marshalling.MonitorServiceClientMessage(*message_data).marshal()
         # Send the marshalled data to the server
+        client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
+        # Receive response from the server
+        response, _ = client_socket.recvfrom(1024) #todo: implement while loop here
+        # Unmarshal the received data
+        response_message = marshalling.MonitorServiceServerMessage.unmarshal(response)
+        print("Response:", response_message.file_data)
         
 
 if __name__ == "__main__":
