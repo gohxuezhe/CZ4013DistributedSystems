@@ -112,14 +112,14 @@ while True:
             marshalled_data = marshalling.MonitorServiceServerMessage(data_to_send).marshal()
 
         # if client requests for modification time of file
-        elif service_code_in_msg == 2:
+        elif service_code_in_msg == 69:
             # Unmarshal the received data
-            message = marshalling.monitor_service_client_message.unmarshal(data)
+            message = marshalling.TmserverServiceClientMessage.unmarshal(data)
             print("Unmarshalled message:", message.service_code, message.file_path)
             # get modification time of file
             modification_time = get_modification_time(message.file_path)
             # Marshal the modification time and send it back to the client
-            marshalled_data = marshalling.monitor_service_server_message(modification_time).marshal()
+            marshalled_data = marshalling.TmserverServiceServerMessage(modification_time).marshal()
 
         udp_socket.sendto(marshalled_data, address)
     except Exception as e:

@@ -81,7 +81,7 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
 
     # 'read' request message
     if service_called == "read":
-        message_data = (1, file_pathname, offset, length_of_bytes) # service_code (term used in marshalling.py) = 0: refers to read
+        message_data = (1, file_pathname, offset, length_of_bytes) # service_code (term used in marshalling.py) = 1: refers to read
         marshalled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshal()
         # Send the marshalled data to the server
         client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
@@ -151,29 +151,29 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
         response_message = marshalling.MonitorServiceServerMessage.unmarshal(response)
         print("Response:", response_message.file_data)
 
-    # 'tmrserver' request message
+    # 'tmserver' request message
     elif service_called == 'tmserver':
-        message_data = (3, file_pathname)  # service_code (term used in marshalling.py) = 3: refers to tmserver
-        marshalled_message_data = marshalling.tmserver_service_client_message(*message_data).marshal()
+        message_data = (69, file_pathname)  # service_code (term used in marshalling.py) = 3: refers to tmserver
+        marshalled_message_data = marshalling.TmserverServiceClientMessage(*message_data).marshal()
         # Send the marshalled data to the server
         client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
         # Unmarshal the received data
-        response_message = marshalling.tmserver_service_server_message.unmarshal(response)
-        return response_message.Tmserver
+        response_message = marshalling.TmserverServiceServerMessage.unmarshal(response)
+        return response_message.modification_time
 
 # Helper function to fill in missing bytes into cache from server
 def fill_cache(file_pathname, offset):
         # Call read service to fill the missing byte in cache
-        message_data = (0, file_pathname, offset, 1)  # service_code (term used in marshalling.py) = 0: refers to read
-        marshalled_message_data = marshalling.read_service_client_message(*message_data).marshal()
+        message_data = (1, file_pathname, offset, 1)  # service_code (term used in marshalling.py) = 1: refers to read
+        marshalled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshal()
         # Send the marshalled data to the server
         client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
         # Unmarshal the received data
-        response_message = marshalling.read_service_server_message.unmarshal(response)
+        response_message = marshalling.ReadServiceServerMessage.unmarshal(response)
         
         # Update cache entry with new byte key and value
         cache_entry = cache.get(file_pathname, {})

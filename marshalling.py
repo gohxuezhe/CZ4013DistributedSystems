@@ -145,7 +145,7 @@ class MonitorServiceServerMessage:
         return cls(file_data)
     
 # (tmserver service) marshalling and unmarshalling for client msg
-class tmserver_service_client_message:
+class TmserverServiceClientMessage:
     def __init__(self, service_code, file_path):
         self.service_code = service_code
         self.file_path = file_path
@@ -168,20 +168,22 @@ class tmserver_service_client_message:
         return cls(service_code, file_path)
 
 # (tmserver service) marshalling and unmarshalling for server msg
-class tmserver_service_server_message:
-    def __init__(self, Tmserver):
-        self.Tmserver = Tmserver
+class TmserverServiceServerMessage:
+    def __init__(self, modification_time):
+        self.modification_time = modification_time
 
     def marshal(self):
-        # Encode object attributes into a byte stream
-        Tmserver_bytes = self.Tmserver.to_bytes(8, byteorder='big')
+        # Convert modification_time to integer
+        modification_time_int = int(self.modification_time)
+        # Encode modification_time into a byte stream
+        modification_time_bytes = modification_time_int.to_bytes(8, byteorder='big')
         # Combine encoded attributes into a byte stream
-        return Tmserver_bytes
+        return modification_time_bytes
 
     @classmethod
     def unmarshal(cls, data):
-        # Decode byte stream to reconstruct object attributes
-        Tmserver = int.from_bytes(data, byteorder='big')
+        # Decode byte stream to reconstruct modification_time
+        modification_time = int.from_bytes(data, byteorder='big')
 
         # Create a new message instance with reconstructed attributes
-        return cls(Tmserver)
+        return cls(modification_time)
