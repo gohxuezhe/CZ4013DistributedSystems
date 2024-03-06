@@ -113,7 +113,7 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
         # Unmarshall the received data
         response_message = marshalling.WriteServiceServerMessage.unmarshal(response)
 
-        # Update cache entry for each byte being written
+        # If file_pathname in cache, update cache entry for each byte being written
         if file_pathname in cache:
             print(f"{file_pathname} in cache, going in to update")
             print(f"Cache content BEFORE: {cache}")
@@ -134,6 +134,17 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
             # Update cache entry with temporary data
             cache_entry["data"] = temp_data
             cache[file_pathname] = cache_entry
+
+        # If file_pathname not in cache, create a new cache entry
+        else: 
+            print(file_pathname, "not in cache, creating new entry")
+            new_cache_entry = {'data': {}, 'Tc': time.time(), 'Tmclient': time.time()}
+            written_content_length = len(content)
+            # Insert new data into temporary dictionary
+            for i in range(written_content_length):
+                new_cache_entry['data'][offset + i] = {'data': content[i], 'Tc': time.time(), 'Tmclient': time.time()}
+            # Update cache with new entry
+            cache[file_pathname] = new_cache_entry
         print(f"Cache content AFTER: {cache}")
         print(f"Response: {response_message.file_data}")
 
