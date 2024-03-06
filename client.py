@@ -70,11 +70,17 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
                         else:
                             # Cache entry is invalid, need request byte from server
                             print("Cache entry is invalidated. Requesting updated data from server.")
-                            response_data += fill_cache(file_pathname, i)  # Read and update the byte
+                            end_of_file, byte_data = fill_cache(file_pathname, i)  # Read and update the byte
+                            if end_of_file:
+                                break
+                            response_data += byte_data
                             print(f"UPDATED cache_entry[\"data\"][\"{i}\"][\"data\"]: {cache_entry['data'][i]['data']}")
                 else:
                     # Byte not found in cache, fetch it from server
-                    response_data += fill_cache(file_pathname, i)  # If the byte is missing, call read service to fill it
+                    end_of_file, byte_data = fill_cache(file_pathname, i)  # If the byte is missing, call read service to fill it
+                    if end_of_file:
+                        break
+                    response_data += byte_data
                     print(f"NEWLY FILLED cache_entry[\"data\"][\"{i}\"][\"data\"]: {cache_entry['data'][i]['data']}")
             print(f"Cache content: {cache}")
             print(f"data that is read in: {response_data}")
@@ -93,7 +99,8 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
             print(f"Cache content BEFORE: {cache}")
             # Update cache for each byte
             cache_entry = cache.get(file_pathname, {})
-            for i in range(offset, offset + length_of_bytes):
+            for i in range(offset, offset + len(response_message.file_data)):
+                print("i:", i)
                 byte_cache = cache_entry.get("data", {})
                 byte_cache_entry = {"data": response_message.file_data[i - offset], "Tc": time.time(), "Tmclient": service("tmserver", file_pathname, i, None, None, None)}
                 byte_cache[i] = byte_cache_entry
@@ -234,15 +241,24 @@ def fill_cache(file_pathname, offset):
     # Unmarshall the received data
     response_message = marshalling.ReadServiceServerMessage.unmarshal(response)
 
-    # Update cache entry with new byte key and value along with timestamps
-    cache_entry = cache.get(file_pathname, {})
-    byte_cache = cache_entry.get("data", {})
-    byte_cache_entry = {"data": response_message.file_data, "Tc": time.time(), "Tmclient": service("tmserver", file_pathname, offset, None, None, None)}
-    byte_cache[offset] = byte_cache_entry
-    cache_entry["data"] = byte_cache
-    cache[file_pathname] = cache_entry
+    end_of_file = False
+    byte_data = response_message.file_data
 
-    return response_message.file_data
+    # means EOF
+    if byte_data == '(End of File)': 
+        end_of_file = True
+        byte_data = None
+    # Not EOF
+    else: 
+        # Update cache entry with new byte key and value along with timestamps
+        cache_entry = cache.get(file_pathname, {})
+        byte_cache = cache_entry.get("data", {})
+        byte_cache_entry = {"data": response_message.file_data, "Tc": time.time(), "Tmclient": service("tmserver", file_pathname, offset, None, None, None)}
+        byte_cache[offset] = byte_cache_entry
+        cache_entry["data"] = byte_cache
+        cache[file_pathname] = cache_entry
+
+    return end_of_file, byte_data
 
 
 if __name__ == "__main__":

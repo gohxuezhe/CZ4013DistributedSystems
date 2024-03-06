@@ -22,6 +22,9 @@ def read_file(file_name, offset, length):
             file.seek(offset)
             # Read the specified length of bytes
             data = file.read(length)
+            # Check if end of file is reached
+            if not data:
+                return "(End of File)"
             return data
     except FileNotFoundError:
         return "(Error) File not found."
