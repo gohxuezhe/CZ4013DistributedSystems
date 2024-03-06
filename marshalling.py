@@ -164,6 +164,90 @@ class MonitorCallbackServiceServerMessage:
         # Create a new message instance with reconstructed attributes
         return cls(file_data)
     
+# (like service) marshalling and unmarshalling for client msg
+class LikeServiceClientMessage:
+    def __init__(self, service_code, file_path):
+        self.service_code = service_code
+        self.file_path = file_path
+    
+    def marshall(self):
+        # Encode object attributes into a byte stream
+        service_code_bytes = self.service_code.to_bytes(1, byteorder='big')
+        file_path_bytes = self.file_path.encode('utf-8')
+        # Combine encoded attributes into a byte stream
+        return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder='big') + file_path_bytes
+    
+    @classmethod
+    def unmarshall(cls, data):
+        # Decode byte stream to reconstruct object attributes
+        service_code = int.from_bytes(data[0:1], byteorder='big')
+        file_path_length = int.from_bytes(data[1:2], byteorder='big')
+        file_path = data[2:2 + file_path_length].decode('utf-8')
+        
+        # Create a new message instance with reconstructed attributes
+        return cls(service_code, file_path)
+    
+# (like service) marshalling and unmarshalling for server msg
+class LikeServiceServerMessage:
+    def __init__(self, like_status):
+        self.like_status = like_status
+    
+    def marshall(self):
+        # Encode object attributes into a byte stream
+        like_status_bytes = self.like_status.encode('utf-8')
+        # Combine encoded attributes into a byte stream
+        return like_status_bytes
+    
+    @classmethod
+    def unmarshall(cls, data):
+        # Decode byte stream to reconstruct object attributes
+        like_status = data.decode('utf-8')
+        # Create a new message instance with reconstructed attributes
+        return cls(like_status)
+    
+# (liked by service) marshalling and unmarshalling for client msg
+class LikedByServiceClientMessage:
+    def __init__(self, service_code, file_path):
+        self.service_code = service_code
+        self.file_path = file_path
+    
+    def marshall(self):
+        # Encode object attributes into a byte stream
+        service_code_bytes = self.service_code.to_bytes(1, byteorder='big')
+        file_path_bytes = self.file_path.encode('utf-8')
+        # Combine encoded attributes into a byte stream
+        return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder='big') + file_path_bytes
+    
+    @classmethod
+    def unmarshall(cls, data):
+        # Decode byte stream to reconstruct object attributes
+        service_code = int.from_bytes(data[0:1], byteorder='big')
+        file_path_length = int.from_bytes(data[1:2], byteorder='big')
+        file_path = data[2:2 + file_path_length].decode('utf-8')
+        
+        # Create a new message instance with reconstructed attributes
+        return cls(service_code, file_path)
+    
+# (liked by service) marshalling and unmarshalling for server msg
+class LikedByServiceServerMessage:
+    def __init__(self, liked_by):
+        self.liked_by = liked_by
+    
+    def marshall(self):
+        # Encode object attributes into a byte stream
+        liked_by_bytes = self.liked_by.encode('utf-8')
+        # Combine encoded attributes into a byte stream
+        return len(liked_by_bytes).to_bytes(1, byteorder='big') + liked_by_bytes
+    
+    @classmethod
+    def unmarshall(cls, data):
+        # Decode byte stream to reconstruct object attributes
+        liked_by_length = int.from_bytes(data[0:1], byteorder='big')
+        liked_by = data[1:1 + liked_by_length].decode('utf-8')
+        
+        # Create a new message instance with reconstructed attributes
+        return cls(liked_by)
+    
 # (tmserver service) marshalling and unmarshalling for client msg
 class TmserverServiceClientMessage:
     def __init__(self, service_code, file_path, offset):

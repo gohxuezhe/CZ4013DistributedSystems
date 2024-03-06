@@ -16,24 +16,21 @@ CLIENT_SERVICE_MESSAGE = """Client Services Available:
 1. Read
 2. Write
 3. Monitor
-4. Idempotent Operation
-5. Non-Idempotent Operation
+4. Like File
+5. File Liked By
 6. Quit
 Enter the service number you want to call: """
 FILE_PATHNAME_MESSAGE = "Enter the file pathname: "
 OFFSET_MESSAGE = "Enter the offset: "
 LENGTH_OF_BYTES_MESSAGE = "Enter length of bytes to read: "
 CONTENT_MESSAGE = "Enter content to write: "
+MONITORING_INTERVAL_MESSAGE = "Enter the length of monitoring interval (in min): "
+# Freshness interval (in seconds)
+t = 60 
 
 # Cache dictionary to hold file contents and timestamps
 cache = {}
 
-# Freshness interval (in seconds)
-t = 60 
-
-# Create a UDP socket
-def create_UDP_socket():
-    return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Client function
 def service(service_called, file_pathname, offset, length_of_bytes, content, length_of_monitoring_interval):
@@ -181,7 +178,31 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
                 return
             except Exception as e:
                 print("Error:", e)
-        return
+    
+    # 'like' request message
+    elif service_called == 'like':
+        message_data = (4, file_pathname)  # service_code (term used in marshalling.py) = 4: refers to like
+        marshallled_message_data = marshalling.LikeServiceClientMessage(*message_data).marshall()
+        # Send the marshallled data to the server
+        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
+        # Receive response from the server
+        response, _ = client_socket.recvfrom(1024)
+        # Unmarshall the received data
+        response_message = marshalling.LikeServiceServerMessage.unmarshall(response)
+        print("Response:", response_message.like_status)
+
+    # 'liked_by' request message
+    elif service_called == 'liked_by':
+        message_data = (5, file_pathname)
+        marshallled_message_data = marshalling.LikedByServiceClientMessage(*message_data).marshall()
+        # Send the marshallled data to the server
+        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
+        # Receive response from the server
+        response, _ = client_socket.recvfrom(1024)
+        # Unmarshall the received data
+        response_message = marshalling.LikedByServiceServerMessage.unmarshall(response)
+        print(response_message.liked_by)
+        # print("Response:", response_message.liked_by)
 
     # 'tmserver' request message
     elif service_called == 'tmserver':
@@ -218,28 +239,27 @@ def fill_cache(file_pathname, offset):
     return response_message.file_data
 
 if __name__ == "__main__":
-    client_socket = create_UDP_socket()
+    # Create a UDP socket
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     while True:
         try:
             option = int(input(CLIENT_SERVICE_MESSAGE))
+            file_pathname = input(FILE_PATHNAME_MESSAGE)
             if option == 1:
-                file_pathname = input(FILE_PATHNAME_MESSAGE)
                 offset = int(input(OFFSET_MESSAGE))
                 length_of_bytes = int(input(LENGTH_OF_BYTES_MESSAGE))
                 service("read", file_pathname, offset, length_of_bytes, None, None)
             elif option == 2:
-                file_pathname = input(FILE_PATHNAME_MESSAGE)
                 offset = int(input(OFFSET_MESSAGE))
                 content = input(CONTENT_MESSAGE)
                 service("write", file_pathname, offset, None, content, None)
             elif option == 3:
-                file_pathname = input(FILE_PATHNAME_MESSAGE)
-                length_of_monitoring_interval = int(input("Enter the length of monitoring interval (in min): "))
+                length_of_monitoring_interval = int(input(MONITORING_INTERVAL_MESSAGE))
                 service("monitor", file_pathname, None, None, None, length_of_monitoring_interval)
             elif option == 4:
-                print("Not implemented yet.")
+                service("like", file_pathname, None, None, None, None)
             elif option == 5:
-                print("Not implemented yet.")
+                service("liked_by", file_pathname, None, None, None, None)
             else:
                 sys.exit()
         except Exception as e:

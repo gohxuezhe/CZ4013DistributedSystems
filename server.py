@@ -10,6 +10,7 @@ hostname = socket.gethostname()
 ip_address = socket.gethostbyname(hostname)
 
 monitor_dict = defaultdict(list)
+like_dict = defaultdict(list) # file: [client_address]
 
 udp_socket.bind((ip_address, 12345))
 print("Server listening on", ip_address, "port 12345")
@@ -87,6 +88,35 @@ def monitor_callback(file_name):
 
         monitor_dict[file_name] = new_monitor_list
 
+def like(file_name, address):
+    try:
+        with open(file_name, "r"):
+            pass
+        if file_name not in like_dict or address not in like_dict[file_name]:
+            like_dict[file_name].append(address)
+            return "Liked"
+        else:
+            like_dict[file_name].remove(address)
+            return "Unliked"
+    except FileNotFoundError:
+        return "(Error) File not found."
+    except Exception as e:
+        return f"(Error) {str(e)}"
+
+def like_by(file_name):
+    try:
+        with open(file_name, "r"):
+            pass
+        list_of_likes = like_dict[file_name]
+        if (len(list_of_likes) > 0):
+            return ''.join([f"IP: {ip}, Port: {port}\n" for ip, port in list_of_likes])
+        else:
+            return "No likes yet."
+    except FileNotFoundError:
+        return "(Error) File not found."
+    except Exception as e:
+        return f"(Error) {str(e)}"
+
 # Get modification time of byte in file
 def get_modification_time(file_name, byte_index):
     try:
@@ -146,6 +176,29 @@ while True:
             marshallled_data = marshalling.MonitorServiceServerMessage(data_to_send).marshall()
             udp_socket.sendto(marshallled_data, address)
 
+        # if client request for like
+        elif service_code_in_msg == 4:
+            # Unmarshall the received data
+            message = marshalling.LikeServiceClientMessage.unmarshall(data)
+            print("Unmarshallled message:", message.service_code, message.file_path)
+            # like data from file, return if successful or not+error
+            data_to_send = like(message.file_path, address)
+            # marshall the data and send it back to the client
+            marshallled_data = marshalling.LikeServiceServerMessage(data_to_send).marshall()
+            udp_socket.sendto(marshallled_data, address)
+
+        # if client request for like by
+        elif service_code_in_msg == 5:
+            # Unmarshall the received data
+            message = marshalling.LikedByServiceClientMessage.unmarshall(data)
+            print("Unmarshallled message:", message.service_code, message.file_path)
+            # like by data from file, return if successful or not+error
+            data_to_send = like_by(message.file_path)
+            print(data_to_send)
+            # marshall the data and send it back to the client
+            marshallled_data = marshalling.LikedByServiceServerMessage(data_to_send).marshall()
+            udp_socket.sendto(marshallled_data, address)
+
         # if client requests for modification time of file
         elif service_code_in_msg == 69:
             # Unmarshall the received data
@@ -159,5 +212,3 @@ while True:
 
     except Exception as e:
         print("Error:", e)
-
-udp_socket.close()
