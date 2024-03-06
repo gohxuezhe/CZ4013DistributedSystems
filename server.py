@@ -1,6 +1,5 @@
 import socket
 import os
-import time
 import marshalling
 import datetime
 from collections import defaultdict
@@ -10,7 +9,7 @@ hostname = socket.gethostname()
 ip_address = socket.gethostbyname(hostname)
 
 monitor_dict = defaultdict(list)
-like_dict = defaultdict(list) # file: [client_address]
+like_dict = defaultdict(list)
 
 udp_socket.bind((ip_address, 12345))
 print("Server listening on", ip_address, "port 12345")
@@ -55,7 +54,7 @@ def write_file(file_name, offset, content):
 # Monitor file (add to monitor_dict)
 def monitor_file(file_name, length_of_monitoring_interval, address):
     try:
-        with open(file_name, "r") as file:
+        with open(file_name, "r"):
             pass
 
         current_time = datetime.datetime.now()
@@ -82,7 +81,7 @@ def monitor_callback(file_name):
             # Read the whole file
             data_to_send = read_file(file_name, 0, -1)
             # Send the whole file to the monitoring client
-            marshallled_data = marshalling.MonitorCallbackServiceServerMessage(data_to_send).marshall()
+            marshallled_data = marshalling.MonitorCallbackServiceServerMessage(data_to_send).marshal()
             udp_socket.sendto(marshallled_data, address)
             new_monitor_list.append((address, end_time))
 
@@ -144,23 +143,23 @@ while True:
         # if client request for read
         if service_code_in_msg == 1:
             # Unmarshall the received data
-            message = marshalling.ReadServiceClientMessage.unmarshall(data)
+            message = marshalling.ReadServiceClientMessage.unmarshal(data)
             print("Unmarshallled message:", message.service_code, message.file_path, message.offset, message.length_of_bytes)
             # Read data from file, extract requested portion of data
             data_to_send = read_file(message.file_path, message.offset, message.length_of_bytes)
             # marshall the data and send it back to the client
-            marshallled_data = marshalling.ReadServiceServerMessage(data_to_send).marshall()
+            marshallled_data = marshalling.ReadServiceServerMessage(data_to_send).marshal()
             udp_socket.sendto(marshallled_data, address)
         
         # if client request for write
         elif service_code_in_msg == 2:
             # Unmarshall the received data
-            message = marshalling.WriteServiceClientMessage.unmarshall(data)
+            message = marshalling.WriteServiceClientMessage.unmarshal(data)
             print("Unmarshallled message:", message.service_code, message.file_path, message.offset, message.content)
             # write data from file, return if successful or not+error
             data_to_send = write_file(message.file_path, message.offset, message.content)
             # marshall the data and send it back to the client
-            marshallled_data = marshalling.WriteServiceServerMessage(data_to_send).marshall()
+            marshallled_data = marshalling.WriteServiceServerMessage(data_to_send).marshal()
             udp_socket.sendto(marshallled_data, address)
             # Update the clients monitoring the file updates
             monitor_callback(message.file_path)
@@ -168,46 +167,46 @@ while True:
         # if client request for monitor
         elif service_code_in_msg == 3:
             # Unmarshall the received data
-            message = marshalling.MonitorServiceClientMessage.unmarshall(data)
+            message = marshalling.MonitorServiceClientMessage.unmarshal(data)
             print("Unmarshallled message:", message.service_code, message.file_path, message.length_of_monitoring_interval)
             # monitor data from file, return if successful or not+error
             data_to_send = monitor_file(message.file_path, message.length_of_monitoring_interval, address)
             # marshall the data and send it back to the client
-            marshallled_data = marshalling.MonitorServiceServerMessage(data_to_send).marshall()
+            marshallled_data = marshalling.MonitorServiceServerMessage(data_to_send).marshal()
             udp_socket.sendto(marshallled_data, address)
 
         # if client request for like
         elif service_code_in_msg == 4:
             # Unmarshall the received data
-            message = marshalling.LikeServiceClientMessage.unmarshall(data)
+            message = marshalling.LikeServiceClientMessage.unmarshal(data)
             print("Unmarshallled message:", message.service_code, message.file_path)
             # like data from file, return if successful or not+error
             data_to_send = like(message.file_path, address)
             # marshall the data and send it back to the client
-            marshallled_data = marshalling.LikeServiceServerMessage(data_to_send).marshall()
+            marshallled_data = marshalling.LikeServiceServerMessage(data_to_send).marshal()
             udp_socket.sendto(marshallled_data, address)
 
         # if client request for like by
         elif service_code_in_msg == 5:
             # Unmarshall the received data
-            message = marshalling.LikedByServiceClientMessage.unmarshall(data)
+            message = marshalling.LikedByServiceClientMessage.unmarshal(data)
             print("Unmarshallled message:", message.service_code, message.file_path)
             # like by data from file, return if successful or not+error
             data_to_send = like_by(message.file_path)
             print(data_to_send)
             # marshall the data and send it back to the client
-            marshallled_data = marshalling.LikedByServiceServerMessage(data_to_send).marshall()
+            marshallled_data = marshalling.LikedByServiceServerMessage(data_to_send).marshal()
             udp_socket.sendto(marshallled_data, address)
 
         # if client requests for modification time of file
         elif service_code_in_msg == 69:
             # Unmarshall the received data
-            message = marshalling.TmserverServiceClientMessage.unmarshall(data)
+            message = marshalling.TmserverServiceClientMessage.unmarshal(data)
             print("Unmarshallled message:", message.service_code, message.file_path)
             # get modification time of file
             modification_time = get_modification_time(message.file_path, message.offset)
             # marshall the modification time and send it back to the client
-            marshallled_data = marshalling.TmserverServiceServerMessage(modification_time).marshall()
+            marshallled_data = marshalling.TmserverServiceServerMessage(modification_time).marshal()
             udp_socket.sendto(marshallled_data, address)
 
     except Exception as e:
