@@ -165,7 +165,7 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
         response, _ = client_socket.recvfrom(1024)
         # Unmarshall the received data
         response_message = marshalling.MonitorServiceServerMessage.unmarshal(response)
-        print(f"Response: {response_message.file_data}")
+        print(f"Response: {response_message.message}")
         # Set timeout for monitoring
         client_socket.settimeout(length_of_monitoring_interval * 60)
 
