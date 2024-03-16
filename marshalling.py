@@ -1,4 +1,5 @@
-# marshalling.py is used to marshal and unmarshal the data to be sent and received from the client and server.
+# marshalling.py is used to marshal and unmarshal the data to be sent and received between the client and server.
+
 # (read service) marshalling and unmarshalling for client msg
 class ReadServiceClientMessage:
     def __init__(self, service_code, request_ID, file_path, offset, length_of_bytes):
@@ -31,27 +32,6 @@ class ReadServiceClientMessage:
 
         # Create a new message instance with reconstructed attributes
         return cls(service_code, request_ID, file_path, offset, length_of_bytes)
-
-
-# (read service) marshalling and unmarshalling for server msg
-class ReadServiceServerMessage:
-    def __init__(self, file_data):
-        self.file_data = file_data
-
-    def marshal(self):
-        # Encode object attributes into a byte stream
-        file_data_bytes = self.file_data.encode("utf-8")
-        # Combine encoded attributes into a byte stream
-        return len(file_data_bytes).to_bytes(1, byteorder="big") + file_data_bytes
-
-    @classmethod
-    def unmarshal(cls, data):
-        # Decode byte stream to reconstruct object attributes
-        file_data_length = int.from_bytes(data[0:1], byteorder="big")
-        file_data = data[1:1 + file_data_length].decode("utf-8")
-
-        # Create a new message instance with reconstructed attributes
-        return cls(file_data)
 
 
 # (write service) marshalling and unmarshalling for client msg
@@ -88,26 +68,6 @@ class WriteServiceClientMessage:
         return cls(service_code, request_ID, file_path, offset, content)
 
 
-# (write service) marshalling and unmarshalling for server msg
-class WriteServiceServerMessage:
-    def __init__(self, file_data):
-        self.file_data = file_data
-
-    def marshal(self):
-        # Encode object attributes into a byte stream
-        file_data_bytes = self.file_data.encode("utf-8")
-        # Combine encoded attributes into a byte stream
-        return len(file_data_bytes).to_bytes(1, byteorder="big") + file_data_bytes
-
-    @classmethod
-    def unmarshal(cls, data):
-        # Decode byte stream to reconstruct object attributes
-        file_data_length = int.from_bytes(data[0:1], byteorder="big")
-        file_data = data[1:1 + file_data_length].decode("utf-8")
-
-        # Create a new message instance with reconstructed attributes
-        return cls(file_data)
-
 # (monitor service) marshalling and unmarshalling for client msg
 class MonitorServiceClientMessage:
     def __init__(self, service_code, file_path, length_of_monitoring_interval):
@@ -133,48 +93,6 @@ class MonitorServiceClientMessage:
 
         # Create a new message instance with reconstructed attributes
         return cls(service_code, file_path, length_of_monitoring_interval)
-
-
-# (monitor service) marshalling and unmarshalling for server msg
-class MonitorServiceServerMessage:
-    def __init__(self, file_data):
-        self.file_data = file_data
-
-    def marshal(self):
-        # Encode object attributes into a byte stream
-        file_data_bytes = self.file_data.encode("utf-8")
-        # Combine encoded attributes into a byte stream
-        return len(file_data_bytes).to_bytes(1, byteorder="big") + file_data_bytes
-
-    @classmethod
-    def unmarshal(cls, data):
-        # Decode byte stream to reconstruct object attributes
-        file_data_length = int.from_bytes(data[0:1], byteorder="big")
-        file_data = data[1:1 + file_data_length].decode("utf-8")
-
-        # Create a new message instance with reconstructed attributes
-        return cls(file_data)
-
-
-# (monitor callback service) marshalling and unmarshalling for server msg
-class MonitorCallbackServiceServerMessage:
-    def __init__(self, file_data):
-        self.file_data = file_data
-
-    def marshal(self):
-        # Encode object attributes into a byte stream
-        file_data_bytes = self.file_data.encode("utf-8")
-        # Combine encoded attributes into a byte stream
-        return len(file_data_bytes).to_bytes(1, byteorder="big") + file_data_bytes
-
-    @classmethod
-    def unmarshal(cls, data):
-        # Decode byte stream to reconstruct object attributes
-        file_data_length = int.from_bytes(data[0:1], byteorder="big")
-        file_data = data[1:1 + file_data_length].decode("utf-8")
-
-        # Create a new message instance with reconstructed attributes
-        return cls(file_data)
 
 
 # (like service) marshalling and unmarshalling for client msg
@@ -204,24 +122,6 @@ class LikeServiceClientMessage:
         # Create a new message instance with reconstructed attributes
         return cls(service_code, request_ID, file_path)
 
-# (like service) marshalling and unmarshalling for server msg
-class LikeServiceServerMessage:
-    def __init__(self, like_status):
-        self.like_status = like_status
-
-    def marshal(self):
-        # Encode object attributes into a byte stream
-        like_status_bytes = self.like_status.encode("utf-8")
-        # Combine encoded attributes into a byte stream
-        return like_status_bytes
-
-    @classmethod
-    def unmarshal(cls, data):
-        # Decode byte stream to reconstruct object attributes
-        like_status = data.decode("utf-8")
-        # Create a new message instance with reconstructed attributes
-        return cls(like_status)
-
 
 # (liked by service) marshalling and unmarshalling for client msg
 class LikedByServiceClientMessage:
@@ -249,27 +149,6 @@ class LikedByServiceClientMessage:
 
         # Create a new message instance with reconstructed attributes
         return cls(service_code, request_ID, file_path)
-
-
-# (liked by service) marshalling and unmarshalling for server msg
-class LikedByServiceServerMessage:
-    def __init__(self, liked_by):
-        self.liked_by = liked_by
-
-    def marshal(self):
-        # Encode object attributes into a byte stream
-        liked_by_bytes = self.liked_by.encode("utf-8")
-        # Combine encoded attributes into a byte stream
-        return len(liked_by_bytes).to_bytes(1, byteorder="big") + liked_by_bytes
-
-    @classmethod
-    def unmarshal(cls, data):
-        # Decode byte stream to reconstruct object attributes
-        liked_by_length = int.from_bytes(data[0:1], byteorder="big")
-        liked_by = data[1 : 1 + liked_by_length].decode("utf-8")
-
-        # Create a new message instance with reconstructed attributes
-        return cls(liked_by)
 
 
 # (tmserver service) marshalling and unmarshalling for client msg
@@ -302,24 +181,24 @@ class TmserverServiceClientMessage:
         # Create a new message instance with reconstructed attributes
         return cls(service_code, request_ID, file_path, offset)
 
-
-# (tmserver service) marshalling and unmarshalling for server msg
-class TmserverServiceServerMessage:
-    def __init__(self, modification_time):
-        self.modification_time = modification_time
+# marshalling and unmarshalling for server msgs
+class ServerMessage:
+    def __init__(self, status, data):
+        self.status = status
+        self.data = data
 
     def marshal(self):
-        # Convert modification_time to integer
-        modification_time_int = int(self.modification_time)
-        # Encode modification_time into a byte stream
-        modification_time_bytes = modification_time_int.to_bytes(8, byteorder="big")
+        # Encode object attributes into a byte stream
+        status_bytes = self.status.to_bytes(1, byteorder="big")
+        data_bytes = self.data.encode("utf-8")
         # Combine encoded attributes into a byte stream
-        return modification_time_bytes
+        return status_bytes + data_bytes
 
     @classmethod
     def unmarshal(cls, data):
-        # Decode byte stream to reconstruct modification_time
-        modification_time = int.from_bytes(data, byteorder="big")
+        # Decode byte stream to reconstruct object attributes
+        status = int.from_bytes(data[0:1], byteorder="big")
+        data = data[1:].decode("utf-8")
 
         # Create a new message instance with reconstructed attributes
-        return cls(modification_time)
+        return cls(status, data)

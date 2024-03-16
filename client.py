@@ -4,6 +4,7 @@ import sys
 import socket
 import time
 import marshalling
+import datetime
 
 load_dotenv()
 SERVER_IP = os.getenv("SERVER_IP")
@@ -86,28 +87,37 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
                     response_data += byte_data
                     # print(f"NEWLY FILLED cache_entry[\"data\"][\"{i}\"][\"data\"]: {cache_entry['data'][i]['data']}")
             # print(f"Cache content: {cache}")
-            # print(f"data that is read in: {response_data}")
+            print(f"\nResponse: {response_data}")
             return
 
         # IF CACHE DOES NOT HAVE THAT FILE
         else:
             response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
+            # Error from server
+            if response_message.status == 1:
+                print(f"\nResponse: Error, {response_message.data}")
+                return
             # print(f"Cache content BEFORE: {cache}")
             # Update cache for each byte
             cache_entry = cache.get(file_pathname, {})
-            for i in range(offset, offset + len(response_message.file_data)):
+            for i in range(offset, offset + len(response_message.data)):
                 # print("i:", i)
                 byte_cache = cache_entry.get("data", {})
-                byte_cache_entry = {"data": response_message.file_data[i - offset], "Tc": time.time(), "Tmclient": service("tmserver", file_pathname, i, None, None, None)}
+                byte_cache_entry = {"data": response_message.data[i - offset], "Tc": time.time(), "Tmclient": service("tmserver", file_pathname, i, None, None, None)}
                 byte_cache[i] = byte_cache_entry
                 cache_entry["data"] = byte_cache
             cache[file_pathname] = cache_entry
             # print(f"Cache content AFTER: {cache}")
-            print(f"\nResponse: {response_message.file_data}")
+            print(f"\nResponse: {response_message.data}")
 
     # 'write' request message
     elif service_called == "write":
         response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
+
+        # Error from server
+        if response_message.status == 1:
+            print(f"\nResponse: Error, {response_message.data}")
+            return
 
         # If file_pathname in cache, update cache entry for each byte being written
         if file_pathname in cache:
@@ -142,19 +152,23 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
             # Update cache with new entry
             cache[file_pathname] = new_cache_entry
         # print(f"Cache content AFTER: {cache}")
-        print(f"\nResponse: {response_message.file_data}")
+        print(f"\nResponse: {response_message.data}")
 
     # 'monitor' request message
     elif service_called == "monitor":
         message_data = (3, file_pathname, length_of_monitoring_interval) # service_code (term used in marshalling.py) = 3: refers to monitor
-        marshallled_message_data = marshalling.MonitorServiceClientMessage(*message_data).marshal()
-        # Send the marshallled data to the server
-        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
+        marshalled_message_data = marshalling.MonitorServiceClientMessage(*message_data).marshal()
+        # Send the marshalled data to the server
+        client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
         # Unmarshall the received data
-        response_message = marshalling.MonitorServiceServerMessage.unmarshal(response)
-        print(f"\nResponse: {response_message.file_data}")
+        response_message = marshalling.ServerMessage.unmarshal(response)
+        # Error from server
+        if response_message.status == 1:
+            print(f"\nResponse: Error, {response_message.data}")
+            return
+        print(f"\nResponse: {response_message.data}")
         # Set timeout for monitoring
         client_socket.settimeout(length_of_monitoring_interval * 60)
 
@@ -163,14 +177,14 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
                 # Receive response from the server
                 response, _ = client_socket.recvfrom(1024)
                 # Unmarshall the received data
-                response_message = marshalling.MonitorCallbackServiceServerMessage.unmarshal(response)
-                print(f'\nNew update for {file_pathname}: {response_message.file_data}')
+                response_message = marshalling.ServerMessage.unmarshal(response)
+                print(f'\nNew update for {file_pathname}: {response_message.data}')
                 # print(f"Cache content BEFORE: {cache}")
                 # Update the cache
                 cache_entry = {}
-                for i in range(len(response_message.file_data)):
+                for i in range(len(response_message.data)):
                     byte_cache = cache_entry.get("data", {})
-                    byte_cache_entry = {"data": response_message.file_data[i], "Tc": time.time(), "Tmclient": service( "tmserver", file_pathname, i, None, None, None)}
+                    byte_cache_entry = {"data": response_message.data[i], "Tc": time.time(), "Tmclient": service( "tmserver", file_pathname, i, None, None, None)}
                     byte_cache[i] = byte_cache_entry
                     cache_entry["data"] = byte_cache
                 cache[file_pathname] = cache_entry
@@ -184,17 +198,25 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
     # 'like' request message
     elif service_called == "like":
         response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
-        print(f"\nResponse: {response_message.like_status}")
+        # Error from server
+        if response_message.status == 1:
+            print(f"\nResponse: Error, {response_message.data}")
+            return
+        print(f"\nResponse: {response_message.data}")
 
     # 'liked_by' request message
     elif service_called == "liked_by":
         response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
-        print(f"\nResponse: {response_message.liked_by}")
+        # Error from server
+        if response_message.status == 1:
+            print(f"\nResponse: Error, {response_message.data}")
+            return
+        print(f"\nResponse: {response_message.data}")
 
     # 'tmserver' request message
     elif service_called == "tmserver":
         response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
-        return response_message.modification_time
+        return datetime.datetime.strptime(response_message.data, "%Y-%m-%d %H:%M:%S").timestamp()
 
 
 # Helper function to fill in missing bytes into cache from server
@@ -202,10 +224,10 @@ def fill_cache(file_pathname, offset):
     response_message = query_server("read", file_pathname, offset, 1, None)
 
     end_of_file = False
-    byte_data = response_message.file_data
+    byte_data = response_message.data
 
     # means EOF
-    if byte_data == '(End of File)': 
+    if byte_data == "End of File": 
         end_of_file = True
         byte_data = None
     # Not EOF
@@ -213,7 +235,7 @@ def fill_cache(file_pathname, offset):
         # Update cache entry with new byte key and value along with timestamps
         cache_entry = cache.get(file_pathname, {})
         byte_cache = cache_entry.get("data", {})
-        byte_cache_entry = {"data": response_message.file_data, "Tc": time.time(), "Tmclient": service("tmserver", file_pathname, offset, None, None, None)}
+        byte_cache_entry = {"data": response_message.data, "Tc": time.time(), "Tmclient": service("tmserver", file_pathname, offset, None, None, None)}
         byte_cache[offset] = byte_cache_entry
         cache_entry["data"] = byte_cache
         cache[file_pathname] = cache_entry
@@ -230,8 +252,8 @@ def format_print(request_id, service_called, file_pathname, offset, length_of_by
     Offset: {offset}
     Length of Bytes: {length_of_bytes}
     Content: {content}""")
-    else:
-        print("tm server request")
+    # else:
+    #     print("tm server request")
 
 # Helper function to send request to server and receive response
 def query_server(service_called, file_pathname, offset, length_of_bytes, content):
@@ -257,25 +279,14 @@ def query_server(service_called, file_pathname, offset, length_of_bytes, content
         marshalled_message_data = marshalling.TmserverServiceClientMessage(*message_data).marshal()    
 
     for _ in range(2):
-        # Send the marshallled data to the server
+        # Send the marshalled data to the server
         client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
         time.sleep(1)
 
-    # Unmarshall the received data
-    if service_called == "read":
-        response_message = marshalling.ReadServiceServerMessage.unmarshal(response)
-    elif service_called == "write":
-        response_message = marshalling.WriteServiceServerMessage.unmarshal(response)
-    elif service_called == "like":
-        response_message = marshalling.LikeServiceServerMessage.unmarshal(response)
-    elif service_called == "liked_by":
-        response_message = marshalling.LikedByServiceServerMessage.unmarshal(response)
-    elif service_called == "tmserver":
-        response_message = marshalling.TmserverServiceServerMessage.unmarshal(response)
-    
-    return response_message
+    # return the unmarshalled the received data
+    return marshalling.ServerMessage.unmarshal(response)
 
 
 if __name__ == "__main__":
