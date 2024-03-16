@@ -192,8 +192,8 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
             except socket.timeout:
                 print("Monitoring completed.")
                 return
-            except Exception as e:
-                print("Error:", e)
+            except Exception as _:
+                return
 
     # 'like' request message
     elif service_called == "like":
