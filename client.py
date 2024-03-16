@@ -15,7 +15,7 @@ CLIENT_SERVICE_MESSAGE = """Client Services Available:
 1. Read
 2. Write
 3. Monitor
-4. Like File
+4. Like/Unlike File
 5. File Liked By
 6. Quit
 Enter the service number you want to call: """
@@ -28,6 +28,9 @@ MONITORING_INTERVAL_MESSAGE = "Enter the length of monitoring interval (in min):
 t = 60
 # Cache dictionary to hold file contents and timestamps
 cache = {}
+REQUEST_ID = 0
+INVOCATION_SEMANTICS = os.getenv("INVOCATION_SEMANTICS")
+print(f"Invocation Semantic: {INVOCATION_SEMANTICS}")
 
 
 # Client function
@@ -88,14 +91,7 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
 
         # IF CACHE DOES NOT HAVE THAT FILE
         else:
-            message_data = (1, file_pathname, offset, length_of_bytes) # service_code (term used in marshalling.py) = 1: refers to read
-            marshallled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshal()
-            # Send the marshallled data to the server
-            client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
-            # Receive response from the server
-            response, _ = client_socket.recvfrom(1024)
-            # Unmarshall the received data
-            response_message = marshalling.ReadServiceServerMessage.unmarshal(response)
+            response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
             print(f"Cache content BEFORE: {cache}")
             # Update cache for each byte
             cache_entry = cache.get(file_pathname, {})
@@ -111,14 +107,7 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
 
     # 'write' request message
     elif service_called == "write":
-        message_data = (2, file_pathname, offset, content)  # service_code (term used in marshalling.py) = 2: refers to write
-        marshallled_message_data = marshalling.WriteServiceClientMessage(*message_data).marshal()
-        # Send the marshalled data to the server
-        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
-        # Receive response from the server
-        response, _ = client_socket.recvfrom(1024)
-        # Unmarshall the received data
-        response_message = marshalling.WriteServiceServerMessage.unmarshal(response)
+        response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
 
         # If file_pathname in cache, update cache entry for each byte being written
         if file_pathname in cache:
@@ -194,52 +183,23 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
 
     # 'like' request message
     elif service_called == "like":
-        message_data = (4, file_pathname)  # service_code (term used in marshalling.py) = 4: refers to like
-        marshallled_message_data = marshalling.LikeServiceClientMessage(*message_data).marshal()
-        # Send the marshallled data to the server
-        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
-        # Receive response from the server
-        response, _ = client_socket.recvfrom(1024)
-        # Unmarshall the received data
-        response_message = marshalling.LikeServiceServerMessage.unmarshal(response)
+        response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
         print(f"Response: {response_message.like_status}")
 
     # 'liked_by' request message
     elif service_called == "liked_by":
-        message_data = (5, file_pathname)
-        marshallled_message_data = marshalling.LikedByServiceClientMessage(*message_data).marshal()
-        # Send the marshallled data to the server
-        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
-        # Receive response from the server
-        response, _ = client_socket.recvfrom(1024)
-        # Unmarshall the received data
-        response_message = marshalling.LikedByServiceServerMessage.unmarshal(response)
+        response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
         print(f"Response: {response_message.liked_by}")
 
     # 'tmserver' request message
     elif service_called == "tmserver":
-        message_data = (69, file_pathname, offset)  # service_code (term used in marshalling.py) = 69: refers to tmserver
-        marshallled_message_data = marshalling.TmserverServiceClientMessage(*message_data).marshal()
-        # Send the marshallled data to the server
-        client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
-        # Receive response from the server
-        response, _ = client_socket.recvfrom(1024)
-        # Unmarshall the received data
-        response_message = marshalling.TmserverServiceServerMessage.unmarshal(response)
+        response_message = query_server(service_called, file_pathname, offset, length_of_bytes, content)
         return response_message.modification_time
 
 
 # Helper function to fill in missing bytes into cache from server
 def fill_cache(file_pathname, offset):
-    # Call read service to fill the missing byte in cache
-    message_data = (1, file_pathname, offset, 1)  # service_code (term used in marshalling.py) = 1: refers to read
-    marshallled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshal()
-    # Send the marshalled data to the server
-    client_socket.sendto(marshallled_message_data, (SERVER_IP, SERVER_PORT))
-    # Receive response from the server
-    response, _ = client_socket.recvfrom(1024)
-    # Unmarshall the received data
-    response_message = marshalling.ReadServiceServerMessage.unmarshal(response)
+    response_message = query_server("read", file_pathname, offset, 1, None)
 
     end_of_file = False
     byte_data = response_message.file_data
@@ -261,34 +221,84 @@ def fill_cache(file_pathname, offset):
     return end_of_file, byte_data
 
 
+# Helper function to send request to server and receive response
+def query_server(service_called, file_pathname, offset, length_of_bytes, content):
+    global REQUEST_ID
+    REQUEST_ID += 1
+
+    if service_called == "read":
+        message_data = (1, REQUEST_ID, file_pathname, offset, length_of_bytes)
+        marshalled_message_data = marshalling.ReadServiceClientMessage(*message_data).marshal()
+    elif service_called == "write":
+        message_data = (2, REQUEST_ID, file_pathname, offset, content)
+        marshalled_message_data = marshalling.WriteServiceClientMessage(*message_data).marshal()
+    elif service_called == "like":
+        message_data = (4, REQUEST_ID, file_pathname)
+        marshalled_message_data = marshalling.LikeServiceClientMessage(*message_data).marshal()
+    elif service_called == "liked_by":
+        message_data = (5, REQUEST_ID, file_pathname)
+        marshalled_message_data = marshalling.LikedByServiceClientMessage(*message_data).marshal()
+    elif service_called == "tmserver":
+        message_data = (69, REQUEST_ID, file_pathname, offset)
+        marshalled_message_data = marshalling.TmserverServiceClientMessage(*message_data).marshal()    
+
+    for _ in range(2):
+        # Send the marshallled data to the server
+        client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
+        # Receive response from the server
+        response, _ = client_socket.recvfrom(1024)
+        time.sleep(1)
+
+    # Unmarshall the received data
+    if service_called == "read":
+        response_message = marshalling.ReadServiceServerMessage.unmarshal(response)
+    elif service_called == "write":
+        response_message = marshalling.WriteServiceServerMessage.unmarshal(response)
+    elif service_called == "like":
+        response_message = marshalling.LikeServiceServerMessage.unmarshal(response)
+    elif service_called == "liked_by":
+        response_message = marshalling.LikedByServiceServerMessage.unmarshal(response)
+    elif service_called == "tmserver":
+        response_message = marshalling.TmserverServiceServerMessage.unmarshal(response)
+    
+    return response_message
+
+
 if __name__ == "__main__":
     # Create a UDP socket
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     while True:
+        service_called = None
+        file_pathname = None
+        offset = None
+        length_of_bytes = None
+        content = None
+        length_of_monitoring_interval = None
         try:
             option = int(input(CLIENT_SERVICE_MESSAGE))
             if option == 1:
+                service_called = "read"
                 file_pathname = input(FILE_PATHNAME_MESSAGE)
                 offset = int(input(OFFSET_MESSAGE))
                 length_of_bytes = int(input(LENGTH_OF_BYTES_MESSAGE))
-                service("read", file_pathname, offset, length_of_bytes, None, None)
             elif option == 2:
+                service_called = "write"
                 file_pathname = input(FILE_PATHNAME_MESSAGE)
                 offset = int(input(OFFSET_MESSAGE))
                 content = input(CONTENT_MESSAGE)
-                service("write", file_pathname, offset, None, content, None)
             elif option == 3:
+                service_called = "monitor"
                 file_pathname = input(FILE_PATHNAME_MESSAGE)
                 length_of_monitoring_interval = int(input(MONITORING_INTERVAL_MESSAGE))
-                service("monitor", file_pathname, None, None, None, length_of_monitoring_interval)
             elif option == 4:
+                service_called = "like"
                 file_pathname = input(FILE_PATHNAME_MESSAGE)
-                service("like", file_pathname, None, None, None, None)
             elif option == 5:
+                service_called = "liked_by"
                 file_pathname = input(FILE_PATHNAME_MESSAGE)
-                service("liked_by", file_pathname, None, None, None, None)
             else:
                 sys.exit()
+            service(service_called, file_pathname, offset, length_of_bytes, content, length_of_monitoring_interval)
         except Exception as e:
             print("Error:", e)
         print("\n")

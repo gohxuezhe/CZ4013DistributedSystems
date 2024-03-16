@@ -1,8 +1,9 @@
 # marshalling.py is used to marshal and unmarshal the data to be sent and received from the client and server.
 # (read service) marshalling and unmarshalling for client msg
 class ReadServiceClientMessage:
-    def __init__(self, service_code, file_path, offset, length_of_bytes):
+    def __init__(self, service_code, request_ID, file_path, offset, length_of_bytes):
         self.service_code = service_code
+        self.request_ID = request_ID
         self.file_path = file_path
         self.offset = offset
         self.length_of_bytes = length_of_bytes
@@ -10,23 +11,26 @@ class ReadServiceClientMessage:
     def marshal(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder="big")
+        request_ID_bytes = self.request_ID.to_bytes(1, byteorder="big")
+        file_path_length_bytes = len(self.file_path).to_bytes(1, byteorder="big")
         file_path_bytes = self.file_path.encode("utf-8")
         offset_bytes = self.offset.to_bytes(8, byteorder="big")
         length_of_bytes_bytes = self.length_of_bytes.to_bytes(8, byteorder="big")
         # Combine encoded attributes into a byte stream
-        return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder="big") + file_path_bytes + offset_bytes + length_of_bytes_bytes
+        return service_code_bytes + request_ID_bytes + file_path_length_bytes + file_path_bytes + offset_bytes + length_of_bytes_bytes
 
     @classmethod
     def unmarshal(cls, data):
         # Decode byte stream to reconstruct object attributes
         service_code = int.from_bytes(data[0:1], byteorder="big")
-        file_path_length = int.from_bytes(data[1:2], byteorder="big")
-        file_path = data[2:2 + file_path_length].decode("utf-8")
-        offset = int.from_bytes(data[2 + file_path_length:10 + file_path_length], byteorder="big")
-        length_of_bytes = int.from_bytes(data[10 + file_path_length:], byteorder="big")
+        request_ID = int.from_bytes(data[1:2], byteorder="big")
+        file_path_length = int.from_bytes(data[2:3], byteorder="big")
+        file_path = data[3:3 + file_path_length].decode("utf-8")
+        offset = int.from_bytes(data[3 + file_path_length:11 + file_path_length], byteorder="big")
+        length_of_bytes = int.from_bytes(data[11 + file_path_length:], byteorder="big")
 
         # Create a new message instance with reconstructed attributes
-        return cls(service_code, file_path, offset, length_of_bytes)
+        return cls(service_code, request_ID, file_path, offset, length_of_bytes)
 
 
 # (read service) marshalling and unmarshalling for server msg
@@ -52,8 +56,9 @@ class ReadServiceServerMessage:
 
 # (write service) marshalling and unmarshalling for client msg
 class WriteServiceClientMessage:
-    def __init__(self, service_code, file_path, offset, content):
+    def __init__(self, service_code, request_ID, file_path, offset, content):
         self.service_code = service_code
+        self.request_ID = request_ID
         self.file_path = file_path
         self.offset = offset
         self.content = content
@@ -61,23 +66,26 @@ class WriteServiceClientMessage:
     def marshal(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder="big")
+        request_ID_bytes = self.request_ID.to_bytes(1, byteorder="big")
+        file_path_length_bytes = len(self.file_path).to_bytes(1, byteorder="big")
         file_path_bytes = self.file_path.encode("utf-8")
         offset_bytes = self.offset.to_bytes(8, byteorder="big")
         content_bytes = self.content.encode("utf-8")
         # Combine encoded attributes into a byte stream
-        return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder="big") + file_path_bytes + offset_bytes + content_bytes
+        return service_code_bytes + request_ID_bytes + file_path_length_bytes + file_path_bytes + offset_bytes + content_bytes
 
     @classmethod
     def unmarshal(cls, data):
         # Decode byte stream to reconstruct object attributes
         service_code = int.from_bytes(data[0:1], byteorder="big")
-        file_path_length = int.from_bytes(data[1:2], byteorder="big")
-        file_path = data[2:2 + file_path_length].decode("utf-8")
-        offset = int.from_bytes(data[2 + file_path_length : 10 + file_path_length], byteorder="big")
-        content = data[10 + file_path_length :].decode("utf-8")
+        request_ID = int.from_bytes(data[1:2], byteorder="big")
+        file_path_length = int.from_bytes(data[2:3], byteorder="big")
+        file_path = data[3:3 + file_path_length].decode("utf-8")
+        offset = int.from_bytes(data[3 + file_path_length : 11 + file_path_length], byteorder="big")
+        content = data[11 + file_path_length :].decode("utf-8")
 
         # Create a new message instance with reconstructed attributes
-        return cls(service_code, file_path, offset, content)
+        return cls(service_code, request_ID, file_path, offset, content)
 
 
 # (write service) marshalling and unmarshalling for server msg
@@ -171,27 +179,30 @@ class MonitorCallbackServiceServerMessage:
 
 # (like service) marshalling and unmarshalling for client msg
 class LikeServiceClientMessage:
-    def __init__(self, service_code, file_path):
+    def __init__(self, service_code, request_ID, file_path):
         self.service_code = service_code
+        self.request_ID = request_ID
         self.file_path = file_path
 
     def marshal(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder="big")
+        request_ID_bytes = self.request_ID.to_bytes(1, byteorder="big")
+        file_path_length_bytes = len(self.file_path).to_bytes(1, byteorder="big")
         file_path_bytes = self.file_path.encode("utf-8")
         # Combine encoded attributes into a byte stream
-        return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder="big") + file_path_bytes
+        return service_code_bytes + request_ID_bytes + file_path_length_bytes + file_path_bytes
 
     @classmethod
     def unmarshal(cls, data):
         # Decode byte stream to reconstruct object attributes
         service_code = int.from_bytes(data[0:1], byteorder="big")
-        file_path_length = int.from_bytes(data[1:2], byteorder="big")
-        file_path = data[2:2 + file_path_length].decode("utf-8")
+        request_ID = int.from_bytes(data[1:2], byteorder="big")
+        file_path_length = int.from_bytes(data[2:3], byteorder="big")
+        file_path = data[3:3 + file_path_length].decode("utf-8")
 
         # Create a new message instance with reconstructed attributes
-        return cls(service_code, file_path)
-
+        return cls(service_code, request_ID, file_path)
 
 # (like service) marshalling and unmarshalling for server msg
 class LikeServiceServerMessage:
@@ -214,26 +225,30 @@ class LikeServiceServerMessage:
 
 # (liked by service) marshalling and unmarshalling for client msg
 class LikedByServiceClientMessage:
-    def __init__(self, service_code, file_path):
+    def __init__(self, service_code, request_ID, file_path):
         self.service_code = service_code
+        self.request_ID = request_ID
         self.file_path = file_path
 
     def marshal(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder="big")
+        request_ID_bytes = self.request_ID.to_bytes(1, byteorder="big")
+        file_path_length_bytes = len(self.file_path).to_bytes(1, byteorder="big")
         file_path_bytes = self.file_path.encode("utf-8")
         # Combine encoded attributes into a byte stream
-        return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder="big") + file_path_bytes
+        return service_code_bytes + request_ID_bytes + file_path_length_bytes + file_path_bytes
 
     @classmethod
     def unmarshal(cls, data):
         # Decode byte stream to reconstruct object attributes
         service_code = int.from_bytes(data[0:1], byteorder="big")
-        file_path_length = int.from_bytes(data[1:2], byteorder="big")
-        file_path = data[2:2 + file_path_length].decode("utf-8")
+        request_ID = int.from_bytes(data[1:2], byteorder="big")
+        file_path_length = int.from_bytes(data[2:3], byteorder="big")
+        file_path = data[3:3 + file_path_length].decode("utf-8")
 
         # Create a new message instance with reconstructed attributes
-        return cls(service_code, file_path)
+        return cls(service_code, request_ID, file_path)
 
 
 # (liked by service) marshalling and unmarshalling for server msg
@@ -259,29 +274,33 @@ class LikedByServiceServerMessage:
 
 # (tmserver service) marshalling and unmarshalling for client msg
 class TmserverServiceClientMessage:
-    def __init__(self, service_code, file_path, offset):
+    def __init__(self, service_code, request_ID, file_path, offset):
         self.service_code = service_code
+        self.request_ID = request_ID
         self.file_path = file_path
         self.offset = offset
 
     def marshal(self):
         # Encode object attributes into a byte stream
         service_code_bytes = self.service_code.to_bytes(1, byteorder="big")
+        request_ID_bytes = self.request_ID.to_bytes(1, byteorder="big")
+        file_path_length_bytes = len(self.file_path).to_bytes(1, byteorder="big")
         file_path_bytes = self.file_path.encode("utf-8")
         offset_bytes = self.offset.to_bytes(8, byteorder="big")
         # Combine encoded attributes into a byte stream
-        return service_code_bytes + len(file_path_bytes).to_bytes(1, byteorder="big") + file_path_bytes + offset_bytes
+        return service_code_bytes + request_ID_bytes + file_path_length_bytes + file_path_bytes + offset_bytes
 
     @classmethod
     def unmarshal(cls, data):
         # Decode byte stream to reconstruct object attributes
         service_code = int.from_bytes(data[0:1], byteorder="big")
-        file_path_length = int.from_bytes(data[1:2], byteorder="big")
-        file_path = data[2 : 2 + file_path_length].decode("utf-8")
-        offset = int.from_bytes(data[2 + file_path_length :], byteorder="big")
+        request_ID = int.from_bytes(data[1:2], byteorder="big")
+        file_path_length = int.from_bytes(data[2:3], byteorder="big")
+        file_path = data[3 : 3 + file_path_length].decode("utf-8")
+        offset = int.from_bytes(data[3 + file_path_length:], byteorder="big")
 
         # Create a new message instance with reconstructed attributes
-        return cls(service_code, file_path, offset)
+        return cls(service_code, request_ID, file_path, offset)
 
 
 # (tmserver service) marshalling and unmarshalling for server msg
