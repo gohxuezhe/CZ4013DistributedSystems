@@ -193,7 +193,7 @@ def service(service_called, file_pathname, offset, length_of_bytes, content, len
                 print("Monitoring completed.")
                 return
             except Exception as _:
-                return
+                continue
 
     # 'like' request message
     elif service_called == "like":
@@ -260,7 +260,7 @@ def query_server(service_called, file_pathname, offset, length_of_bytes, content
     global REQUEST_ID
     REQUEST_ID += 1
 
-    format_print(REQUEST_ID, service_called, file_pathname, offset, length_of_bytes, content)
+    # format_print(REQUEST_ID, service_called, file_pathname, offset, length_of_bytes, content)
 
     if service_called == "read":
         message_data = (1, REQUEST_ID, file_pathname, offset, length_of_bytes)
@@ -283,7 +283,7 @@ def query_server(service_called, file_pathname, offset, length_of_bytes, content
         client_socket.sendto(marshalled_message_data, (SERVER_IP, SERVER_PORT))
         # Receive response from the server
         response, _ = client_socket.recvfrom(1024)
-        time.sleep(1)
+        # time.sleep(1)
 
     # return the unmarshalled the received data
     return marshalling.ServerMessage.unmarshal(response)
